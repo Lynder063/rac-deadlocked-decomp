@@ -55,6 +55,17 @@ git clone https://github.com/AngheloAlf/SN-Systems-ProDG_for_PS2_3.01 toolchain/
 git clone https://github.com/AngheloAlf/sce_ps2_sdk_24 toolchain/sn-prodg-24
 ```
 
+**The level overlays** (optional; needed only to regenerate `config/overlays.tsv`
+and `config/overlay_functions.tsv`, which are committed). Unpack your disc with
+the [wrench](https://github.com/chaoticgd/wrench) build tool and split them:
+
+```
+wrenchbuild unpack GAME.iso -o DIR -g dl -r us
+venv/bin/python tools/split_overlays.py DIR
+```
+
+See `docs/OVERLAYS.md`.
+
 **Helper tools** (used by the workflow below, cloned locally, not vendored):
 
 ```
@@ -202,4 +213,5 @@ identifiers, file names or directory names from any other source (see
 | `tools/` | build, audit, diff and report tools |
 | `nonmatching/` | drafts that do not match yet (not built) |
 | `docs/RESEARCH.md` | how the executable is built and how it is rebuilt |
+| `docs/OVERLAYS.md` | the 47 level overlays and how they are split and counted |
 | `docs/CREDITS.md`, `THIRD_PARTY_NOTICES.md` | sources and licences |

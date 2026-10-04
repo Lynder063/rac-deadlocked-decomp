@@ -50,9 +50,10 @@ segment per section) for splat. `config/sections.txt` lists them:
 | `net.text` | `0x01E9A000` | `0x97330` |
 | `net.nostomp` | `0x01F31380` | `0x6C20` |
 
-Level code lives in `.text` and `.data`; per wrench's documentation those
-sections are overwritten when a level loads, so each level may carry its own
-overlay on the disc (table of contents at sector 1001). Not looked at yet.
+Level code lives in `.text` and `.data`; those sections are overwritten when a
+level loads, and each of the 47 levels carries its own overlay on the disc
+(table of contents at sector 1001). The resident `.text` is the menus' code: 97
+percent of it is inside the multiplayer menu overlay. See `docs/OVERLAYS.md`.
 
 ## Disassembly
 

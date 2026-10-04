@@ -36,7 +36,7 @@ REPORT = ROOT / "progress" / "report.json"
 FUNCTIONS = ROOT / "config" / "functions.tsv"
 MATCHES = ROOT / "build" / "matches.json"
 
-DEF_RE = re.compile(r"^[A-Za-z_][\w \t\*]*?\b(func_[0-9A-F]{8})\s*\(.*\)\s*\{?\s*$", re.M)
+DEF_RE = re.compile(r"^[A-Za-z_][\w \t\*]*?\b(func_(?:L\d\d_)?[0-9A-F]{8})\s*\(.*\)\s*\{?\s*$", re.M)
 
 # Progress categories shown on decomp.dev.
 CATEGORIES = [
@@ -60,6 +60,42 @@ SEGMENT_CATEGORIES = {
 LIBGCC_RANGE = (0x12EE30, 0x131A00)
 LIBGCC_TSV = ROOT / "config" / "libgcc.tsv"
 LIBM_TSV = ROOT / "config" / "libm.tsv"
+OVERLAYS_TSV = ROOT / "config" / "overlays.tsv"
+OVERLAY_FUNCS_TSV = ROOT / "config" / "overlay_functions.tsv"
+
+
+def overlay_levels():
+    """[(id, directory)] of config/overlays.tsv."""
+    out = []
+    if OVERLAYS_TSV.exists():
+        for l in OVERLAYS_TSV.read_text().splitlines():
+            if l and not l.startswith("#"):
+                i, d, _, _ = l.split("\t")
+                out.append((i, d))
+    return out
+
+
+def level_title(i, d):
+    return "Level %s: %s" % (i[1:], d.split("/", 1)[1].split("_", 1)[1].replace("_", " ").title())
+
+
+def cats(seg):
+    """Progress categories of a segment."""
+    if seg == "ovl_common":
+        return ["common", "overlays", "game"]
+    if seg.startswith("ovl_L"):
+        return ["level_" + seg[5:], "levels", "overlays", "game"]
+    return SEGMENT_CATEGORIES[seg]
+
+
+def unit_name(seg):
+    if seg == "ovl_common":
+        return "overlays/common"
+    if seg.startswith("ovl_L"):
+        for i, d in overlay_levels():
+            if i == seg[4:]:
+                return "overlays/%s_%s" % (i, d.split("/", 1)[1].split("_", 1)[1])
+    return "asm/" + seg
 
 
 def libm_addrs():
@@ -83,6 +119,14 @@ def load_functions():
             if f["addr"] in libm:
                 f["seg"] = "libm"
             funcs[name] = f
+    if OVERLAY_FUNCS_TSV.exists():
+        for l in OVERLAY_FUNCS_TSV.read_text().splitlines():
+            if l and not l.startswith("#"):
+                name, addr, size, cls, lv = l.split("\t")
+                if cls == "main":
+                    continue  # identical to the resident level text, counted there
+                seg = "ovl_common" if cls == "common" else "ovl_" + lv
+                funcs[name] = dict(name=name, addr=int(addr, 16), size=int(size, 16), seg=seg)
     return funcs
 
 
@@ -191,14 +235,14 @@ def build_report(matched: set) -> dict:
                 uname = ("libm/" if src.startswith("src/libm/") else "libgcc/") + obj
             else:
                 uname = src[len("src/"):].rsplit(".", 1)[0]
-            add_unit(uname, fl, src, SEGMENT_CATEGORIES[fl[0]["seg"]])
+            add_unit(uname, fl, src, cats(fl[0]["seg"]))
     # everything not decompiled yet, per segment
     rest = defaultdict(list)
     for n, f in funcs.items():
         if n not in in_src:
             rest[f["seg"]].append(f)
     for seg, fl in sorted(rest.items()):
-        add_unit("asm/" + seg, fl, "asm/" + seg, SEGMENT_CATEGORIES[seg])
+        add_unit(unit_name(seg), fl, unit_name(seg), cats(seg))
 
     all_funcs = list(funcs.values())
     complete_units = sum(1 for u in units if u["metadata"]["complete"])
@@ -208,8 +252,13 @@ def build_report(matched: set) -> dict:
         "version": 2,
         "categories": [],
     }
-    for cid, cname in CATEGORIES:
-        cf = [f for f in all_funcs if cid in SEGMENT_CATEGORIES[f["seg"]]]
+    extra = [("overlays", "Level overlays"), ("common", "Common (shared by 2+ levels)"),
+             ("levels", "Level-specific")]
+    extra += [("level_" + i[1:], level_title(i, d)) for i, d in overlay_levels()]
+    for cid, cname in CATEGORIES + extra:
+        cf = [f for f in all_funcs if cid in cats(f["seg"])]
+        if not cf:
+            continue  # a level with no code of its own has no category
         report["categories"].append({"id": cid, "name": cname, "measures": measures(cf, matched)})
     return report
 

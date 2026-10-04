@@ -39,9 +39,27 @@ version if someone with a PAL disc joins.
 | Game | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=game&label=Game&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=game) | All game code |
 | Core | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=core&label=Core&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=core) | Engine and SDK code that stays resident (`core.text`) |
 | Network | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=net&label=Network&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=net) | Network code (`net.text`) |
-| Level code | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=level&label=Level%20code&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=level) | Level code (`.text`, overwritten per level) |
+| Resident level code | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=level&label=Resident%20level%20code&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=level) | The level text kept in the executable (`.text`); the menus' code |
 | libgcc | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=libgcc&label=libgcc&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=libgcc) | GCC runtime library rebuilt from GCC's own source (`src/libgcc/`) |
 | libm | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=libm&label=libm&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=libm) | Math library rebuilt from newlib's source (`src/libm/`) |
+| Level overlays | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=overlays&label=Level%20overlays&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=overlays) | All level overlay code (`docs/OVERLAYS.md`) |
+| Common | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=common&label=Common&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=common) | Overlay code shared by two or more levels |
+| Level-specific | [![](https://decomp.dev/Lynder063/rac-deadlocked-decomp.svg?mode=shield&category=levels&label=Level-specific&measure=matched_code_percent)](https://decomp.dev/Lynder063/rac-deadlocked-decomp/SCUS_974.65?category=levels) | Overlay code found in one level only (the multiplayer menu) |
+
+### Level overlays
+
+Each level carries its own build of the level code, loaded over the resident
+image when the level starts ([`docs/OVERLAYS.md`](docs/OVERLAYS.md)). There are
+47 overlays (24 campaign and 23 multiplayer levels) that share 85 to 97 percent of
+their code at different addresses. Their functions are split and counted once
+each: code shared by two or more levels under *Common* (4,714 functions),
+code found in one level only under *Level-specific* (2,315 functions, all of
+them the multiplayer menu's) and that level's own row. Functions identical to
+one in the resident level text are counted there, not twice. The overlays
+come from your own disc: unpack it with the
+[wrench](https://github.com/chaoticgd/wrench) build tool and run
+`tools/split_overlays.py` (see `docs/OVERLAYS.md`). Nothing is decompiled in
+them yet.
 
 A function counts as matched when its compiled code equals retail with
 relocatable fields masked (`tools/audit_matches.py`). This is not a
@@ -65,6 +83,9 @@ build it you need your own legally obtained copy of the game. Read
   programs (through Wine in a container on Linux and macOS). Retail was
   assembled by SN's own assembler, whose nops and constant sequences
   `tools/cc.sh` reproduces.
+- **Level code is overlays.** Each level has its own copy of the level code,
+  47 in all, split by `tools/split_overlays.py` into common and level-specific
+  functions, as in rac1-decomp (`docs/OVERLAYS.md`).
 - **Library code is rebuilt from source.** libgcc comes from GCC and libm from
   newlib, both built unchanged with Sony's `2.9-ee` driver and matched against the
   retail bytes; only files that match are kept.
@@ -95,11 +116,11 @@ match.
 | `src/core/`, `src/net/`, `src/game/` | Decompiled game code, one file per start address until the real source file is known |
 | `src/libgcc/`, `src/libm/` | GCC's runtime library and newlib's math library, sources that match retail (see their READMEs and `THIRD_PARTY_NOTICES.md`) |
 | `include/` | Shared headers (`common.h`) and assembly macros |
-| `config/` | splat configuration, section table, function list (`functions.tsv`) and library tables (`libgcc.tsv`, `libm.tsv`) |
+| `config/` | splat configuration, section table, function list (`functions.tsv`), library tables (`libgcc.tsv`, `libm.tsv`) and the level overlays (`overlays.tsv`, `overlay_functions.tsv`) |
 | `tools/` | Unpacker, section splitter, compile pipeline (`cc.sh`), audit, diff and report tools |
 | `tools/docker/` | The build container runner |
 | `nonmatching/` | Drafts that do not match yet (not built) |
-| `docs/` | `RESEARCH.md` (how the executable is built and rebuilt), `CREDITS.md` |
+| `docs/` | `RESEARCH.md` (how the executable is built and rebuilt), `OVERLAYS.md` (the level overlays), `CREDITS.md` |
 | `baserom/` | Your own executable, not tracked |
 | `asm/` | Locally generated disassembly, not tracked |
 | `progress/report.json` | objdiff-format progress report read by decomp.dev |
