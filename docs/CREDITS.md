@@ -19,4 +19,5 @@ the rest into the real repository.
 | [chaoticgd/wrench](https://github.com/chaoticgd/wrench) | PS2 R&C asset toolkit; its docs (`docs/file_loading.md`, "WAD Compression") describe the packet format that `tools/unpack_wad.py` implements and the section layout of the executable |
 | [AngheloAlf toolchain mirrors](https://github.com/AngheloAlf) | SN ProDG / PS2 SDK mirrors used by rac1-decomp |
 | [decomp.dev](https://decomp.dev), [objdiff](https://github.com/encounter/objdiff), [splat](https://github.com/ethteck/splat), [spimdisasm](https://github.com/Decompollaborate/spimdisasm), [m2c](https://github.com/matt-kempster/m2c), [asm-differ](https://github.com/simonlindholm/asm-differ) | Tooling and progress tracking |
+| [newlib](https://sourceware.org/newlib/) (fdlibm) | The math library sources in `src/libm/` (snapshot 2000-02-17, the same one rac1-decomp matched against), see `THIRD_PARTY_NOTICES.md` |
 | [GCC](https://gcc.gnu.org) | `libgcc2.c`, `longlong.h`, `fp-bit.c` (GPL with the libgcc exception), see `THIRD_PARTY_NOTICES.md` |

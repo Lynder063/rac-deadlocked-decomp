@@ -15,5 +15,5 @@ while IFS= read -r f; do
     extra=$(head -3 "$f" | sed -n 's#^/\* cflags: \(.*\) \*/#\1#p')
     wine "$CC" -O2 -G8 -fopt-stack -mno-check-zero-division $extra -Iinclude -c "$f" -o "$o"
     n=$((n+1))
-done < <(find src -name '*.c' -not -path 'src/libgcc/*' | sort)
+done < <(find src -name '*.c' -not -path 'src/libgcc/*' -not -path 'src/libm/*' | sort)
 echo "compiled $n files into build/obj/"

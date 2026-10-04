@@ -35,14 +35,15 @@ def main() -> int:
     # symbols are paired with retail addresses by config/libgcc.tsv.
     alias = {}
     by_addr = {a: n for n, (a, _) in sizes.items()}
-    lg = ROOT / "config" / "libgcc.tsv"
-    if lg.exists():
-        for l in lg.read_text().splitlines():
-            if l and not l.startswith("#"):
-                obj, sym, a, _ = l.split("\t")
-                alias[(obj, sym)] = by_addr[int(a, 16)]
+    for tsv in ("libgcc.tsv", "libm.tsv"):
+        lg = ROOT / "config" / tsv
+        if lg.exists():
+            for l in lg.read_text().splitlines():
+                if l and not l.startswith("#"):
+                    obj, sym, a, _ = l.split("\t")
+                    alias[(obj[:-2] if obj.endswith(".o") else obj, sym)] = by_addr[int(a, 16)]
     exact, bad = [], []
-    for path in sorted(glob.glob(str(ROOT / "build" / "obj" / "*.o")) + glob.glob(str(ROOT / "build" / "libgcc" / "*.o"))):
+    for path in sorted(glob.glob(str(ROOT / "build" / "obj" / "*.o")) + glob.glob(str(ROOT / "build" / "libgcc" / "*.o")) + glob.glob(str(ROOT / "build" / "libm" / "*.o"))):
         elf = ELFFile(open(path, "rb"))
         text = elf.get_section_by_name(".text")
         data = text.data() if text else b""

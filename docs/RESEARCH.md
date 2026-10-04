@@ -134,6 +134,16 @@ stack frame is larger), `__udivdi3` is 12 bytes short. Sony's prebuilt
 `libgcc.a` matches retail for all three, so retail linked that archive;
 the archive is a reference only and not a substitute.
 
+## libm
+
+The math library (`__ieee754_*`, `sqrtf`, `floorf` ...) is newlib's libm
+(fdlibm), built by Sony's 2.9-ee driver with `-O2 -G2`, the same as libgcc.
+`tools/map_archive.py` pairs the functions of the library archive in the
+toolchain mirror with retail (`config/libm.tsv`: 40 functions, 20,220 bytes);
+`tools/build_libm.sh` builds newlib's sources (snapshot 2000-02-17,
+`tools/get_newlib.sh`). 27 of the 40 members match exactly (7,744 bytes);
+`src/libm/README.md` lists the rest.
+
 ## Checking matches
 
 `tools/audit_matches.py` compares every compiled function with the retail bytes

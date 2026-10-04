@@ -45,28 +45,43 @@ CATEGORIES = [
     ("net", "Network"),
     ("level", "Level code"),
     ("libgcc", "libgcc"),
+    ("libm", "libm"),
 ]
 SEGMENT_CATEGORIES = {
     "core_text": ["core", "game"],
     "net_text": ["net", "game"],
     "text": ["level", "game"],
     "libgcc": ["libgcc", "game"],
+    "libm": ["libm", "game"],
 }
 # libgcc is GCC's own source built by Sony's compiler (src/libgcc/README.md);
 # it occupies this part of core_text, and config/libgcc.tsv pairs the
 # compiled symbols with retail addresses.
 LIBGCC_RANGE = (0x12EE30, 0x131A00)
 LIBGCC_TSV = ROOT / "config" / "libgcc.tsv"
+LIBM_TSV = ROOT / "config" / "libm.tsv"
+
+
+def libm_addrs():
+    out = set()
+    if LIBM_TSV.exists():
+        for l in LIBM_TSV.read_text().splitlines():
+            if l and not l.startswith("#"):
+                out.add(int(l.split("\t")[2], 16))
+    return out
 
 
 def load_functions():
     funcs = {}
+    libm = libm_addrs()
     for l in FUNCTIONS.read_text().splitlines():
         if l and not l.startswith("#"):
             name, addr, size, seg = l.split("\t")
             f = dict(name=name, addr=int(addr, 16), size=int(size, 16), seg=seg)
             if seg == "core_text" and LIBGCC_RANGE[0] <= f["addr"] < LIBGCC_RANGE[1]:
                 f["seg"] = "libgcc"
+            if f["addr"] in libm:
+                f["seg"] = "libm"
             funcs[name] = f
     return funcs
 
@@ -83,11 +98,23 @@ def libgcc_functions():
     return rows
 
 
+def libm_functions():
+    """(member, symbol, function name) rows of config/libm.tsv."""
+    by_addr = {f["addr"]: n for n, f in load_functions().items()}
+    rows = []
+    if LIBM_TSV.exists():
+        for l in LIBM_TSV.read_text().splitlines():
+            if l and not l.startswith("#"):
+                obj, sym, a, _ = l.split("\t")
+                rows.append((obj, sym, by_addr[int(a, 16)]))
+    return rows
+
+
 def source_functions():
     """func_XXXXXXXX definitions in src/, by source file."""
     out = {}
     for p in sorted((ROOT / "src").rglob("*.c")):
-        if p.parent.name == "libgcc":
+        if p.parent.name in ("libgcc", "libm"):
             continue
         names = DEF_RE.findall(p.read_text(errors="ignore"))
         if names:
@@ -96,6 +123,11 @@ def source_functions():
     for obj, _, name in libgcc_functions():
         src = "src/libgcc/fp-bit.c" if obj.endswith("-bit") else "src/libgcc/libgcc2.c"
         out.setdefault(src + ":" + obj, []).append(name)
+    # libm: newlib's math sources, one unit per source file kept in src/libm
+    for obj, _, name in libm_functions():
+        stem = obj[:-2]
+        if (ROOT / "src" / "libm" / (stem + ".c")).exists():
+            out.setdefault("src/libm/%s.c:%s" % (stem, stem), []).append(name)
     return out
 
 
@@ -155,7 +187,10 @@ def build_report(matched: set) -> dict:
         fl = [funcs[n] for n in names if n in funcs]
         if fl:
             src, _, obj = path.partition(":")
-            uname = "libgcc/" + obj if obj else src[len("src/"):].rsplit(".", 1)[0]
+            if obj:
+                uname = ("libm/" if src.startswith("src/libm/") else "libgcc/") + obj
+            else:
+                uname = src[len("src/"):].rsplit(".", 1)[0]
             add_unit(uname, fl, src, SEGMENT_CATEGORIES[fl[0]["seg"]])
     # everything not decompiled yet, per segment
     rest = defaultdict(list)
