@@ -3,7 +3,8 @@
 Check every compiled function against the retail image.
 
 Reads build/obj/*.o (tools/build.sh) and compares each `func_XXXXXXXX` with
-the retail bytes at that address. Fields a linker would fill in (jump
+the retail bytes at that address (and each `func_L<level>_<address>` with the bytes
+in that level's overlay, found in $OVERLAYS or private/overlays). Fields a linker would fill in (jump
 targets, the immediates of lui and of address arithmetic and loads/stores)
 are masked: this is NOT a link-time comparison, so a function that calls or
 reads the wrong symbol can still count. Writes build/matches.json.
@@ -12,6 +13,7 @@ Usage: venv/bin/python tools/audit_matches.py
 """
 import glob
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -31,6 +33,26 @@ def main() -> int:
             sizes[n] = (int(a, 16), int(s, 16))
     with open(ROOT / "baserom" / "SCUS_974.65.elf", "rb") as f:
         secs = mp.sections(ELFFile(f))
+    # level overlay functions (func_L<level>_<address>): retail bytes come from the
+    # overlay ELFs of an unpacked disc (docs/OVERLAYS.md): $OVERLAYS or private/overlays
+    ovl = {}
+    for l in (ROOT / "config" / "overlay_functions.tsv").read_text().splitlines():
+        if l and not l.startswith("#"):
+            n, a, sz, _, _ = l.split("\t")
+            ovl[n] = (n.split("_")[1], int(a, 16), int(sz, 16))
+    ovl_dirs = {}
+    for l in (ROOT / "config" / "overlays.tsv").read_text().splitlines():
+        if l and not l.startswith("#"):
+            i, d, _, _ = l.split("\t")
+            ovl_dirs[i] = d
+    ovl_root = Path(os.environ.get("OVERLAYS") or ROOT / "private" / "overlays")
+    ovl_secs = {}
+
+    def overlay_secs(i):
+        if i not in ovl_secs:
+            p = ovl_root / "levels" / ovl_dirs[i] / "overlay.elf"
+            ovl_secs[i] = mp.sections(ELFFile(open(p, "rb"))) if p.exists() else None
+        return ovl_secs[i]
     # libgcc objects (tools/build_libgcc.sh) are verbatim GCC source: their
     # symbols are paired with retail addresses by config/libgcc.tsv.
     alias = {}
@@ -52,15 +74,24 @@ def main() -> int:
                 continue
             name = alias.get((Path(path).stem, s.name))
             if name is None:
-                if not re.fullmatch(r"func_[0-9A-F]{8}", s.name):
+                if not re.fullmatch(r"func_(L\d\d_)?[0-9A-F]{8}", s.name):
                     continue
                 name = s.name
-            addr, size = sizes.get(name, (None, None))
-            if addr is None:
-                bad.append((s.name, "not in config/functions.tsv"))
-                continue
-            code = data[s["st_value"]: s["st_value"] + s["st_size"]]
-            retail = mp.read(secs, addr, size)
+            if name in ovl:
+                lvl, addr, size = ovl[name]
+                osecs = overlay_secs(lvl)
+                if osecs is None:
+                    bad.append((s.name, "overlay data not found (set OVERLAYS)"))
+                    continue
+                code = data[s["st_value"]: s["st_value"] + s["st_size"]]
+                retail = mp.read(osecs, addr, size)
+            else:
+                addr, size = sizes.get(name, (None, None))
+                if addr is None:
+                    bad.append((s.name, "not in config/functions.tsv"))
+                    continue
+                code = data[s["st_value"]: s["st_value"] + s["st_size"]]
+                retail = mp.read(secs, addr, size)
             # The linker pads functions to 8 bytes with nops: those belong to
             # the retail function but not to the compiled one.
             pad = size - len(code)

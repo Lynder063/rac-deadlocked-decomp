@@ -25,7 +25,18 @@ def main() -> int:
         if l.startswith(name + "\t"):
             _, a, s, _ = l.split("\t")
             addr, size = int(a, 16), int(s, 16)
-    with open(ROOT / "baserom" / "SCUS_974.65.elf", "rb") as f:
+    elf_path = ROOT / "baserom" / "SCUS_974.65.elf"
+    if addr is None:  # a level overlay function: func_L<level>_<address>
+        import os
+        for l in (ROOT / "config" / "overlay_functions.tsv").read_text().splitlines():
+            if l.startswith(name + "\t"):
+                _, a, s, _, _ = l.split("\t")
+                addr, size = int(a, 16), int(s, 16)
+        for l in (ROOT / "config" / "overlays.tsv").read_text().splitlines():
+            if l.startswith(name.split("_")[1] + "\t"):
+                d = l.split("\t")[1]
+        elf_path = Path(os.environ.get("OVERLAYS") or ROOT / "private" / "overlays") / "levels" / d / "overlay.elf"
+    with open(elf_path, "rb") as f:
         secs = mp.sections(ELFFile(f))
     retail = mp.read(secs, addr, size)
     code = b""

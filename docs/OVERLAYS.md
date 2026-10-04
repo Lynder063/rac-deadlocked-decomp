@@ -151,9 +151,22 @@ function). All 13 overlays other than `L00` are complete. In `L00` (the menu)
 223 small functions are merged into the function before them, because splat
 runs on past a function's declared size; they are not yet in separate files.
 
+## Decompiling overlay functions
+
+An overlay function is named `func_<level>_<address>` (for example
+`func_L01_00631CB8`) and its source goes to `src/overlays/<level>/<ADDRESS>.c`,
+where level and address are those in its name and in
+`asm/overlays/<level>/nonmatchings/`. `tools/build.sh` compiles it like any other
+file (same compiler, flags and assembler passes). `tools/audit_matches.py` and
+`tools/diff_func.py` compare it with the bytes in that level's `overlay.elf`, found in
+`$OVERLAYS` or `private/overlays` (a symlink to the folder from
+`wrenchbuild unpack`). Jump targets and relocatable immediates are masked, so
+the different load addresses of the levels do not matter, and a match counts in
+**every** level that contains the function.
+
 ## Status
 
-Splitting, counting and disassembly are done; the overlay functions are in the
-report with no matches. Not done yet: compiling overlay code at its load address
-and per-level link information. Because `common` functions are counted once,
-every match improves all the levels that contain it.
+Splitting, counting, disassembly and auditing are done. Six functions of the
+first level have been matched (common code), which already shows in 2 other
+levels' rows too (`level_41` has two of them). Not done yet: per-level link
+information (the data and bss layouts differ per level).

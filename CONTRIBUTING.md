@@ -180,6 +180,12 @@ These came out of the work so far; add yours here.
   is added by `tools/cc.sh`; if it is missing or extra for one function, the rule
   in `tools/ps2eeas_nops.py` needs refining, not the C.
 
+### Level overlay functions
+
+Functions of the level overlays (`func_L01_00631CB8` and so on) go to
+`src/overlays/<level>/<ADDRESS>.c` and are checked against the level's `overlay.elf`;
+see `docs/OVERLAYS.md` for how to get them and how they are counted.
+
 ### Names
 
 Name functions by address (`func_XXXXXXXX`), types `Type1`, `Type2` ... and
