@@ -186,6 +186,15 @@ Functions of the level overlays (`func_L01_00631CB8` and so on) go to
 `src/overlays/<level>/<ADDRESS>.c` and are checked against the level's `overlay.elf`;
 see `docs/OVERLAYS.md` for how to get them and how they are counted.
 
+### Automatic drafts (`tools/auto_structs.py`)
+
+For small functions, `venv/bin/python tools/auto_structs.py prepare overlay N`
+runs m2c, builds structures from the `->unkXX` accesses (members named by
+offset, types from how they are used) and writes four compile variants;
+`bash tools/docker/run.sh bash build/auto3/compile.sh` compiles them, `check`
+keeps the ones that equal retail and `adopt` copies them into `src/`. The first
+run matched 71 of 1,800 functions tried.
+
 ### Names
 
 Name functions by address (`func_XXXXXXXX`), types `Type1`, `Type2` ... and
