@@ -80,21 +80,29 @@ def level_title(i, d):
 
 
 def cats(seg):
-    """Progress categories of a segment."""
-    if seg == "ovl_common":
-        return ["common", "overlays", "game"]
-    if seg.startswith("ovl_L"):
-        return ["level_" + seg[5:], "levels", "overlays", "game"]
+    """Progress categories of a segment. An overlay segment is `ovl_<class>|<levels>`:
+    the unit is tagged with every level that contains it, so a level's category
+    adds up all the overlay code that level has."""
+    if seg.startswith("ovl_"):
+        kind, _, levels = seg[4:].partition("|")
+        base = ["common"] if kind == "common" else ["levels"]
+        return ["level_" + l[1:] for l in levels.split(",")] + base + ["overlays", "game"]
     return SEGMENT_CATEGORIES[seg]
 
 
+_OVERLAY_SETS = []
+
+
 def unit_name(seg):
-    if seg == "ovl_common":
-        return "overlays/common"
-    if seg.startswith("ovl_L"):
-        for i, d in overlay_levels():
-            if i == seg[4:]:
-                return "overlays/%s_%s" % (i, d.split("/", 1)[1].split("_", 1)[1])
+    if seg.startswith("ovl_"):
+        if seg not in _OVERLAY_SETS:
+            _OVERLAY_SETS.append(seg)
+        kind, _, levels = seg[4:].partition("|")
+        if kind == "level":
+            for i, d in overlay_levels():
+                if i == levels:
+                    return "overlays/%s_%s" % (i, d.split("/", 1)[1].split("_", 1)[1])
+        return "overlays/common_%03d" % (_OVERLAY_SETS.index(seg) + 1)
     return "asm/" + seg
 
 
@@ -125,7 +133,7 @@ def load_functions():
                 name, addr, size, cls, lv = l.split("\t")
                 if cls == "main":
                     continue  # identical to the resident level text, counted there
-                seg = "ovl_common" if cls == "common" else "ovl_" + lv
+                seg = "ovl_%s|%s" % (cls, lv)
                 funcs[name] = dict(name=name, addr=int(addr, 16), size=int(size, 16), seg=seg)
     return funcs
 

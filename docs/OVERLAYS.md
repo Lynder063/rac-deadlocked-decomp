@@ -69,8 +69,15 @@ Output, committed (names, addresses and sizes only):
 4,161 functions (1.5 MB) are in all 47 overlays; most of the rest are shared by
 the 24 campaign levels or by the multiplayer levels. The only code that belongs
 to a single level is the multiplayer menu's (`L00`); the other 46 overlays
-consist of common code only. The progress report therefore has one level
-category, `level_00`, besides **Common** and **Level-specific**.
+consist of common code only.
+
+**Progress per level.** The report has a category `level_NN` for each of the 47
+levels. Common functions are grouped by the exact set of levels that contain
+them (213 groups, one report unit each) and every unit is tagged with all the
+levels in its set, so a level's category adds up all the overlay code that
+level has, shared or not. Overlay code identical to a resident function is not
+included (it is counted in the resident level text). This is what the per-level
+table in the README shows.
 
 | Id | Level | Kind | `.text` at | `.text` size | Functions | Code |
 |---|---|---|---|---|---|---|
