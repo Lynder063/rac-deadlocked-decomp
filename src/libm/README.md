@@ -19,4 +19,10 @@ by Sony's toolchain, so they are rebuilt from those sources unchanged.
 - **Not matching yet:** `e_fmod` (5 words differ), `e_sqrt` (same size, 20 words),
   `e_pow`, `s_rint`, and the float members `ef_asin`, `ef_exp`, `ef_log`,
   `ef_log10`, `ef_pow`, `ef_rem_pio2`, `ef_sqrt`, `wf_acos`: their size differs from
-  retail by up to 0x7C bytes, which points at a different revision of those files.
+  retail by up to 0x7C bytes. Part of that is nops: retail has two nops before every
+  `div.s` (also in the matching `__ieee754_sqrtf` body, where the compiler puts the
+  `div.s` in a jump's delay slot and retail does not). None of the compilers in the
+  mirrors, none of their machine flags, and none of the assemblers (the GNU `as`
+  of either mirror, and `ps2eeas`, tested on small cases) produce those nops, so the
+  rule behind them is still unknown. The rest points at a different revision of
+  those files.

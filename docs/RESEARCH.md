@@ -130,6 +130,11 @@ and an `mtc1` whose destination is read by the next instruction gets one too.
 Retail's level code has 722 `mtc1; nop; cvt.s.w` sequences and 93 without; the
 nop pass accounts for the first group.
 
+Not explained yet: retail has two nops before most `div.s` (281 of 435 in level code,
+including library code), while the compilers in the mirrors emit none and `ps2eeas` on
+small test cases adds none either; in the library code the compiler puts the `div.s` in
+a jump's delay slot and retail does not.
+
 Other near misses are a delay slot that retail leaves empty, or a register move
 that retail schedules before a save where the compiler puts it after.
 
