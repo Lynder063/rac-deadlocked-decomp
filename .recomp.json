@@ -1,0 +1,29 @@
+{
+  "$schema": "https://recomp.fyi/schema/v1.json",
+  "game": "Ratchet: Deadlocked",
+  "system": "PlayStation 2",
+  "type": "decomp",
+  "project": "rac-deadlocked-decomp",
+  "status": "exploring",
+  "toolchain": "SN ProDG ee-gcc 2.95.3",
+  "approach": "Matching decompilation: C/C++ that builds to a byte-identical copy of the retail executable.",
+  "original": {
+    "region": "NTSC-U",
+    "serial": "SCUS_974.65",
+    "sha1": "aa91b1c3b9b1a244320c47580b77342ef9856e95"
+  },
+  "maintainers": [
+    { "name": "Lynder063", "link": "https://github.com/Lynder063" }
+  ],
+  "links": [
+    { "label": "Progress on decomp.dev", "url": "https://decomp.dev/Lynder063/rac-deadlocked-decomp" },
+    { "label": "Research notes", "url": "https://github.com/Lynder063/rac-deadlocked-decomp/blob/main/docs/RESEARCH.md" }
+  ],
+  "help": [
+    "finding the retail compiler",
+    "level overlays",
+    "naming functions"
+  ],
+  "tags": ["Insomniac Games", "Ratchet & Clank", "MIPS R5900"],
+  "notes": "Early stage. The retail executable is a loader plus a packed game image; unpacking, splitting into sections and disassembly with splat are done and about 8,000 functions are identified. No function is matched yet."
+}

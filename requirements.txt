@@ -1,0 +1,11 @@
+# Pinned: asm/ is regenerated locally (tools/setup_asm.sh) and must come out
+# byte-identical for every contributor, so the disassembler versions are fixed.
+# splat imports its `mips` extras (n64img, pygfxd, crunch64) even for a PS2
+# target, so they are installed and pinned too.
+splat64[mips]==0.50.0
+spimdisasm==1.42.4
+rabbitizer==1.16.2
+n64img==0.3.3
+pygfxd==1.0.5
+crunch64==0.6.2
+pyelftools

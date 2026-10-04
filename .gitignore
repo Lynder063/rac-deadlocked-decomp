@@ -1,0 +1,86 @@
+# Never commit dumps, ROMs, or anything extracted from the original disc.
+baserom*/
+!baserom/README.md
+
+# Third-party toolchain mirrors (e.g. SN Systems ProDG) - local tooling only,
+# never committed. See docs/TOOLCHAIN.md.
+toolchain/
+*.iso
+*.bin
+*.cue
+*.elf
+disks/
+
+# Build output
+build/
+*.o
+*.map
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python
+venv*/
+__pycache__/
+*.pyc
+build-sn/
+build-sn*/
+
+# Editor/tool configs that are not part of the project
+
+# Local agent context, which differs between contributors.
+/AGENTS.md
+/docs/claude-memory/
+
+# Stray artifacts from tool bootstrap scripts -- never part of the project.
+Python/
+python_install_*.log
+
+# Third-party decomp tools (m2c, asm-differ) -- cloned locally, not vendored.
+tools/ext/
+ctx.c
+ctx.c.m2c
+
+# Disassembly of the retail executable -- regenerate with tools/setup_asm.sh.
+# It carries the original instruction bytes, so it never goes in the repo.
+asm/
+# Assets splat extracts from the executable.
+assets/
+.aider*
+
+# One-off scratch / helper scripts created during a session.
+patch_*.py
+get_count.py
+get_func.py
+get_funcs.py
+run_test.py
+update_db.py
+query.py
+scratch.c
+16
+rac1_ld_numbered.txt
+
+# AI Decomp platform local data (database, local model training datasets, logs)
+tools/platform/data/
+*.db
+*.sqlite
+*.sqlite3
+dataset*.jsonl
+
+# splat writes these next to its config on every run; the build doesn't use them.
+/SCES_509.16.ld
+/undefined_funcs_auto.txt
+/undefined_syms_auto.txt
+
+# tools/export_dataset.py output: carries retail disassembly.
+*.jsonl
+
+# Ghidra local datamining cache (generate on demand via tools/datamine_ghidra.py)
+config/ghidra_*.json
+*.ld
+
+# Local-only helpers and reference material
+private/

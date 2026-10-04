@@ -1,0 +1,160 @@
+name: deadlocked
+sha1: 5619a8de0247e093ab672fca30dbf59bc16fe333
+options:
+  basename: SCUS_974.65
+  # Built by tools/unpack_wad.py + tools/split_image.py from baserom/SCUS_974.65.
+  target_path: baserom/SCUS_974.65.elf
+  base_path: ..
+  compiler: EEGCC
+  platform: ps2
+  asm_path: asm
+  src_path: src
+  build_path: build
+  asset_path: assets
+  # Emit a .s for EVERY function, decompiled or not: the audit tools read
+  # retail sizes and bytes from them.
+  disassemble_all: True
+  matchings_path: nonmatchings
+  # src/ is hand-organised, never let splat create one .c per segment.
+  create_c_files: False
+  find_file_boundaries: True
+  # .text embeds data inside functions; keep those functions as code.
+  disasm_unknown: True
+  generate_asm_macros_files: True
+  symbol_addrs_path:
+    - config/symbol_addrs.txt
+
+# The ELF holds the 17 sections back to back, with no padding, and every
+# section has its own address (config/sections.txt), so each section is its
+# own segment. The NOBITS sections (core.bss, .bss) have no file data and are
+# left out for now; they come back once the code that uses them is split.
+segments:
+  - name: vutext
+    type: code
+    start: 0x26C
+    vram: 0x100080
+    subsegments:
+      - [0x26C, bin, vutext]
+  - name: core_text
+    type: code
+    start: 0x1A34C
+    vram: 0x11A180
+    subsegments:
+      - [0x1A34C, c, core_text]
+  - name: core_data
+    type: code
+    start: 0x63CDC
+    vram: 0x163B80
+    subsegments:
+      - [0x63CDC, data, core_data]
+  - name: core_rdata
+    type: code
+    start: 0x9202C
+    vram: 0x191F00
+    subsegments:
+      - [0x9202C, rodata, core_rdata]
+  - name: core_lit
+    type: code
+    start: 0xA5274
+    vram: 0x21DC80
+    subsegments:
+      - [0xA5274, rodata, core_lit]
+  - name: lit
+    type: code
+    start: 0xA572C
+    vram: 0x21E180
+    subsegments:
+      - [0xA572C, rodata, lit]
+  - name: data
+    type: code
+    start: 0xA861C
+    vram: 0x3C5A00
+    subsegments:
+      - [0xA861C, data, data]
+  - name: lvl_vtbl
+    type: code
+    start: 0xD3A20
+    vram: 0x3F0E80
+    subsegments:
+      - [0xD3A20, data, lvl_vtbl]
+  - name: lvl_camvtbl
+    type: code
+    start: 0xD3A2C
+    vram: 0x3F0F00
+    subsegments:
+      - [0xD3A2C, data, lvl_camvtbl]
+  - name: lvl_sndvtbl
+    type: code
+    start: 0xD3A40
+    vram: 0x3F0F80
+    subsegments:
+      - [0xD3A40, data, lvl_sndvtbl]
+  - name: text
+    type: code
+    start: 0xD3A48
+    vram: 0x3F1000
+    subsegments:
+      - [0xD3A48, c, text_003F1000]
+      - [0xD3A80, c, text_003F1038]
+      - [0xD43C0, c, text_003F1978]
+      - [0xD6340, c, text_003F38F8]
+      - [0xD64D8, c, text_003F3A90]
+      - [0xD66A8, c, text_003F3C60]
+      - [0xD6878, c, text_003F3E30]
+      - [0xD6B10, c, text_003F40C8]
+      - [0xD6D38, c, text_003F42F0]
+      - [0xD6E58, c, text_003F4410]
+      - [0xD6F68, c, text_003F4520]
+      - [0xD76B0, c, text_003F4C68]
+      - [0xD77E8, c, text_003F4DA0]
+      - [0xD7958, c, text_003F4F10]
+      - [0xD7B00, c, text_003F50B8]
+      - [0xD7D78, c, text_003F5330]
+      - [0xD7E88, c, text_003F5440]
+      - [0xD8090, c, text_003F5648]
+      - [0xD8530, c, text_003F5AE8]
+      - [0xD8A60, c, text_003F6018]
+      - [0xD8BB4, c, text_003F616C]
+      - [0xDB5F8, c, text_003F8BB0]
+      - [0xDB740, c, text_003F8CF8]
+      - [0xDB910, c, text_003F8EC8]
+      - [0xDBAC8, c, text_003F9080]
+      - [0xDC938, c, text_003F9EF0]
+      - [0xDD038, c, text_003FA5F0]
+      - [0xDDC48, c, text_003FB200]
+      - [0xDDF78, c, text_003FB530]
+      - [0xDE2B0, c, text_003FB868]
+      - [0xDE450, c, text_003FBA08]
+      - [0xDE820, c, text_003FBDD8]
+      - [0xE6510, c, text_00403AC8]
+      - [0xE7558, c, text_00404B10]
+      - [0xE88C0, c, text_00405E78]
+      - [0xE9088, c, text_00406640]
+      - [0xEC62C, c, text_00409BE4]
+      - [0xEC9D0, c, text_00409F88]
+      - [0x14CB58, c, text_0046A110]
+      - [0x14CB80, c, text_0046A138]
+      - [0x14CBB0, c, text_0046A168]
+      - [0x14CBC0, c, text_0046A178]
+      - [0x14CBD0, c, text_0046A188]
+      - [0x14CC08, c, text_0046A1C0]
+      - [0x14CC48, c, text_0046A200]
+  - name: patch_data
+    type: code
+    start: 0x230120
+    vram: 0x54D700
+    subsegments:
+      - [0x230120, data, patch_data]
+  - name: net_text
+    type: code
+    start: 0x230138
+    vram: 0x1E9A000
+    subsegments:
+      - [0x230138, c, net_text]
+  - name: net_nostomp
+    type: code
+    start: 0x2C7468
+    vram: 0x1F31380
+    subsegments:
+      - [0x2C7468, data, net_nostomp]
+  - [0x2ce088]

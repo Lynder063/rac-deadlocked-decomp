@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""
+Split the unpacked retail image into its sections and rebuild an ELF from it.
+
+Input is the output of tools/unpack_wad.py. The image is a stream of 16-byte
+section headers, each followed by its data (the "custom executable format"
+described in wrench's docs/file_loading.md):
+
+  0x0  s32  dest_address
+  0x4  s32  copy_size (not including this header)
+  0x8  s32  ELF section type (not used by the game)
+  0xc  s32  entry point
+
+Section names are not stored in the image. They are assigned by position,
+following the standard section layout of these executables (`.vutext`,
+`core.*`, `lvl.*vtbl`, `.text`, `net.*`), as documented by the wrench project.
+
+Outputs, all under baserom/ (ignored by git):
+  baserom/sections/<index>_<name>.bin   raw section data
+  baserom/SCUS_974.65.elf               ELF32 built from the sections, for splat
+and, with --manifest, config/sections.txt (names, addresses and sizes only,
+no retail bytes: safe to commit).
+
+Usage:
+  python tools/split_image.py [--manifest]
+"""
+import struct
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+BASEROM = ROOT / "baserom"
+
+# Names by position, following the layout documented by the wrench project.
+NAMES = [
+    ".reginfo", ".vutext", "core.text", "core.data", "core.rdata", "core.bss",
+    "core.lit", ".lit", ".bss", ".data", "lvl.vtbl", "lvl.camvtbl",
+    "lvl.sndvtbl", ".text", "patch.data", "net.text", "net.nostomp",
+]
+SHT_PROGBITS, SHT_NOBITS, SHT_MIPS_REGINFO, SHT_STRTAB = 1, 8, 0x70000006, 3
+EXEC_NAMES = {".vutext", "core.text", ".text", "net.text"}
+WRITE_NAMES = {"core.data", "core.bss", ".bss", ".data", "net.nostomp", "net.text"}
+
+
+def parse(data: bytes):
+    secs, pos = [], 0
+    while pos < len(data):
+        dest, size, typ, entry = struct.unpack_from("<IiII", data, pos)
+        if size < 0 or pos + 16 + size > len(data):
+            raise ValueError("bad section header at 0x%x" % pos)
+        secs.append(dict(dest=dest, size=size, type=typ, entry=entry,
+                         file_off=pos + 16, data=data[pos + 16:pos + 16 + size]))
+        pos += 16 + size
+    if len(secs) != len(NAMES):
+        raise ValueError("expected %d sections, found %d" % (len(NAMES), len(secs)))
+    for s, n in zip(secs, NAMES):
+        s["name"] = n
+    return secs
+
+
+def build_elf(secs, entry: int) -> bytes:
+    """ELF32 little-endian MIPS executable, one section per image section."""
+    shstr = b"\0"
+    name_off = {}
+    for s in secs + [dict(name=".shstrtab")]:
+        name_off[s["name"]] = len(shstr)
+        shstr += s["name"].encode() + b"\0"
+    ehsize, phentsize, shentsize = 52, 32, 40
+    phnum = len(secs)
+    off = ehsize + phentsize * phnum
+    body, offsets = b"", {}
+    for s in secs:
+        # packed with no padding: a splat segment then covers the sections
+        # back to back, with an explicit vram per section
+        offsets[s["name"]] = off + len(body)
+        if s["type"] != SHT_NOBITS:
+            body += s["data"]
+    str_off = off + len(body)
+    body += shstr
+    sh_off = (off + len(body) + 3) & ~3
+    body += b"\0" * (sh_off - off - len(body))
+
+    ehdr = b"\x7fELF\x01\x01\x01" + b"\0" * 9
+    ehdr += struct.pack("<HHIIIIIHHHHHH", 2, 8, 1, entry, ehsize, sh_off,
+                        0x20924001, ehsize, phentsize, phnum, shentsize,
+                        len(secs) + 2, len(secs) + 1)
+    phdrs = b""
+    for s in secs:
+        flags = 4 | (1 if s["name"] in EXEC_NAMES else 0) | (2 if s["name"] in WRITE_NAMES else 0)
+        filesz = 0 if s["type"] == SHT_NOBITS else s["size"]
+        phdrs += struct.pack("<IIIIIIII", 1, offsets[s["name"]], s["dest"], s["dest"],
+                             filesz, s["size"], flags, 16)
+    shdrs = struct.pack("<10I", *([0] * 10))
+    for s in secs:
+        flags = 2 | (4 if s["name"] in EXEC_NAMES else 0) | (1 if s["name"] in WRITE_NAMES else 0)
+        shdrs += struct.pack("<10I", name_off[s["name"]], s["type"], flags, s["dest"],
+                             offsets[s["name"]], s["size"], 0, 0, 16, 0)
+    shdrs += struct.pack("<10I", name_off[".shstrtab"], SHT_STRTAB, 0, 0,
+                         str_off, len(shstr), 0, 0, 1, 0)
+    return ehdr + phdrs + body + shdrs
+
+
+def main() -> int:
+    src = BASEROM / "SCUS_974.65.unpacked"
+    if not src.exists():
+        print("run tools/unpack_wad.py first")
+        return 1
+    secs = parse(src.read_bytes())
+    entry = secs[0]["entry"]
+    out = BASEROM / "sections"
+    out.mkdir(exist_ok=True)
+    for i, s in enumerate(secs):
+        (out / ("%02d_%s.bin" % (i, s["name"].replace(".", "_").strip("_")))).write_bytes(s["data"])
+    (BASEROM / "SCUS_974.65.elf").write_bytes(build_elf(secs, entry))
+    print("%d sections, entry 0x%x, wrote baserom/SCUS_974.65.elf" % (len(secs), entry))
+    if "--manifest" in sys.argv[1:]:
+        lines = ["# name  address  size  elf_type  (generated by tools/split_image.py)",
+                 "# entry 0x%x" % entry]
+        for s in secs:
+            lines.append("%-14s 0x%08x 0x%07x 0x%08x" % (s["name"], s["dest"], s["size"], s["type"]))
+        (ROOT / "config" / "sections.txt").write_text("\n".join(lines) + "\n")
+        print("wrote config/sections.txt")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

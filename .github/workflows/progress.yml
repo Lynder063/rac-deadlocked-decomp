@@ -1,0 +1,70 @@
+# decomp.dev progress report.
+#
+# decomp.dev reads objdiff's report.json from an artifact named
+# "<VERSION>_report" on the default branch. This job does NOT build the
+# game: the compiler and the retail executable cannot be redistributed, so
+# neither is available here. The report is generated locally from a real
+# build (tools/gen_progress_report.py) and committed as progress/report.json;
+# this job only validates and uploads it. It holds names, addresses, sizes
+# and percentages -- no retail bytes.
+#
+# The repository must be registered once by hand at
+# https://decomp.dev/manage/new; this workflow alone does not add it.
+name: Progress report
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the committed report is well-formed
+        run: python tools/gen_progress_report.py --check
+
+      - name: Validate the report with objdiff
+        run: |
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/objdiff-cli" \
+            https://github.com/encounter/objdiff/releases/download/v3.8.1/objdiff-cli-linux-x86_64
+          echo "c8290281e82114bcc1a06ff73061110d3902a177822e750337de2537188e358f  $RUNNER_TEMP/objdiff-cli" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/objdiff-cli"
+          "$RUNNER_TEMP/objdiff-cli" report changes progress/report.json progress/report.json \
+            -o "$RUNNER_TEMP/validation.json"
+
+      - name: Summarise
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          r = json.load(open("progress/report.json"))
+          m = r["measures"]
+          print("| Measure | Value |")
+          print("| --- | --- |")
+          print("| Code matched | %.2f%% (%s / %s bytes) |"
+                % (m["matched_code_percent"], m["matched_code"], m["total_code"]))
+          print("| Functions matched | %s / %s |" % (m["matched_functions"], m["total_functions"]))
+          print("| Units complete | %s / %s |" % (m["complete_units"], m["total_units"]))
+          for c in r["categories"]:
+              cm = c["measures"]
+              print("| %s | %.2f%% code, %s functions |"
+                    % (c["name"], cm["matched_code_percent"], cm["matched_functions"]))
+          PY
+
+      - name: Upload the progress report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCUS_974.65_report
+          path: progress/report.json
+          if-no-files-found: error
