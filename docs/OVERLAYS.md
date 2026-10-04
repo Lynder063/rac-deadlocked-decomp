@@ -129,10 +129,31 @@ table in the README shows.
 | L73 | Maraxus Prison Splitscreen | multiplayer | `0x003A1580` | `0x28DAA8` | 5885 | 2513 KB |
 | L74 | Ghost Station Splitscreen | multiplayer | `0x003A1580` | `0x28DAA8` | 5885 | 2513 KB |
 
+## Disassembly (`tools/gen_overlay_asm.py`)
+
+```
+OVERLAYS=DIR bash tools/setup_asm.sh          # or: venv/bin/python tools/gen_overlay_asm.py DIR
+```
+
+Every distinct function is disassembled once, in the overlay where it occurs
+first (the level id in its name). For each of the 14 overlays that is first
+for some function (`L00`, `L01`, `L02`, `L04` to `L08`, `L10`, `L11`, `L13`,
+`L14`, `L15`, `L41`) the tool writes a splat configuration for its
+`overlay.elf` (one segment per section), with the canonical function names
+and boundaries from `config/overlay_functions.tsv`, plus the resident
+functions as external symbols so calls into the core code are named. The
+result is in `asm/overlays/<id>/nonmatchings/` (not tracked, 430 MB). Functions
+that contain data (a `b` jumps over it) get a splat subsegment of their own,
+as in the resident `.text` (`docs/RESEARCH.md`).
+
+Result: **6,806 of 7,029** functions (every common and level-specific
+function). All 13 overlays other than `L00` are complete. In `L00` (the menu)
+223 small functions are merged into the function before them, because splat
+runs on past a function's declared size; they are not yet in separate files.
+
 ## Status
 
-Splitting and counting only. The overlay functions are in the report with
-no matches. Not done yet: disassembling the overlays (one representative per
-common function, since they are identical), compiling overlay code at its load
-address, and per-level link information. Because `common` functions are counted
-once, every match improves all the levels that contain it.
+Splitting, counting and disassembly are done; the overlay functions are in the
+report with no matches. Not done yet: compiling overlay code at its load address
+and per-level link information. Because `common` functions are counted once,
+every match improves all the levels that contain it.

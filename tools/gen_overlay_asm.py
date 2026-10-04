@@ -23,10 +23,38 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import split_overlays as so  # noqa: E402
+import rabbitizer  # noqa: E402
 from elftools.elf.elffile import ELFFile  # noqa: E402
 
 ROOT = so.ROOT
 OUT = ROOT / "asm" / "overlays"
+
+
+def dirty(code, vram):
+    """Does a function contain an invalid instruction (data embedded in it)?"""
+    import struct
+    for k, (w,) in enumerate(struct.iter_unpack("<I", code[: len(code) // 4 * 4])):
+        if not rabbitizer.Instruction(w, vram + 4 * k, category=rabbitizer.InstrCategory.R5900).isValid():
+            return True
+    return False
+
+
+def text_chunks(funcs, sh_addr, sh_offset):
+    """splat subsegments for .text: every function with embedded data gets its own
+    (splat gives up on the rest of a file at its first invalid instruction), the
+    clean runs between them are grouped."""
+    chunks, run = [], None
+    for addr, size, code in funcs:
+        if dirty(code, addr):
+            if run is not None:
+                chunks.append(run)
+                run = None
+            chunks.append(addr)
+        elif run is None:
+            run = addr
+    if run is not None:
+        chunks.append(run)
+    return [("text_%08X" % a, sh_offset + (a - sh_addr)) for a in chunks]
 
 
 def canonical_names(overlays):
@@ -96,9 +124,10 @@ def main() -> int:
         used = set()
         for addr, size, code in per_overlay[i]:
             nm = digest_name.get(so.digest(code))
-            if nm and nm not in used:      # a duplicate inside one overlay keeps splat's name
+            if nm and nm not in used:
                 used.add(nm)
                 lines.append("%s = 0x%X; // type:func size:0x%X" % (nm, addr, size))
+            # a second copy inside one overlay keeps splat's own name (its file is dropped below)
         for n, a, s in main_syms:
             if 0x21E180 <= a < 0x1000000:      # the overlay's own range: not the resident code
                 continue
@@ -111,8 +140,13 @@ def main() -> int:
         seg = []
         for s in secs:
             nm = s.name.lstrip(".").replace(".", "_")
-            seg.append("  - name: %s\n    type: code\n    start: 0x%X\n    vram: 0x%X\n    subsegments:\n      - [0x%X, %s, %s]"
-                       % (nm, s["sh_offset"], s["sh_addr"], s["sh_offset"], want[s.name], nm))
+            if s.name == ".text":
+                subs = "\n".join("      - [0x%X, c, %s]" % (off, n)
+                                 for n, off in text_chunks(per_overlay[i], s["sh_addr"], s["sh_offset"]))
+            else:
+                subs = "      - [0x%X, %s, %s]" % (s["sh_offset"], want[s.name], nm)
+            seg.append("  - name: %s\n    type: code\n    start: 0x%X\n    vram: 0x%X\n    subsegments:\n%s"
+                       % (nm, s["sh_offset"], s["sh_addr"], subs))
         end = max(s["sh_offset"] + s["sh_size"] for s in secs)
         yaml = """name: overlay_%s
 options:

@@ -20,3 +20,9 @@ venv/bin/python tools/unpack_wad.py
 venv/bin/python tools/split_image.py
 rm -rf asm
 venv/bin/python -m splat split config/splat.yaml
+
+# Optional: the level overlays. Set OVERLAYS to a folder made by
+# `wrenchbuild unpack GAME.iso -o DIR -g dl -r us` (docs/OVERLAYS.md).
+if [ -n "${OVERLAYS:-}" ]; then
+    venv/bin/python tools/gen_overlay_asm.py "$OVERLAYS"
+fi
