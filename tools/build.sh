@@ -13,7 +13,7 @@ while IFS= read -r f; do
     o=build/obj/$(echo "${f#src/}" | tr '/' '_' | sed 's/\.c$/.o/')
     # a file may add flags with a first-lines comment:  /* cflags: -mno-split-addresses */
     extra=$(head -3 "$f" | sed -n 's#^/\* cflags: \(.*\) \*/#\1#p')
-    wine "$CC" -O2 -G8 -fopt-stack -mno-check-zero-division $extra -Iinclude -c "$f" -o "$o"
+    bash tools/cc.sh "$f" "$o" $extra
     n=$((n+1))
 done < <(find src -name '*.c' -not -path 'src/libgcc/*' -not -path 'src/libm/*' | sort)
 echo "compiled $n files into build/obj/"

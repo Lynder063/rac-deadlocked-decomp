@@ -114,11 +114,24 @@ Source-level findings: a counter that retail reloads from memory needs
 `array[i].field`; an `s8` parameter compared with -1 adds sign extensions that
 retail does not have (use `s32`).
 
-Still open: retail has a `nop` between `mtc1` and `cvt.s.w` in 722 places (and
-none in 93) that this compiler with GNU `as` does not produce; the Up Your
-Arsenal decomp lists the same pattern as open. Other near misses are a delay
-slot that retail leaves empty, or a register move that retail schedules before a
-save where the compiler puts it after.
+### The assembler
+
+Retail's code was assembled by SN's own assembler (`ps2eeas`), not by the GNU
+`as` the compiler driver calls. It differs in ways that show up as extra nops
+and different constant sequences. `tools/cc.sh` reproduces them in two extra
+steps around the normal compile (compile to assembly, expand 64-bit constants as
+`ps2eeas` does, assemble once, add the nops `ps2eeas` adds, assemble again), with
+`tools/ps2eeas_dli.py` and `tools/ps2eeas_nops.py` taken from rac1-decomp,
+which measured the real assembler. The rules: loops shorter than a minimum are
+padded with nops (here, 5 instructions target through branch, 6 with the
+branch's delay slot: the retail histogram of backward branches in level code
+starts at 5), a float compare followed directly by `bc1` gets a nop between them,
+and an `mtc1` whose destination is read by the next instruction gets one too.
+Retail's level code has 722 `mtc1; nop; cvt.s.w` sequences and 93 without; the
+nop pass accounts for the first group.
+
+Other near misses are a delay slot that retail leaves empty, or a register move
+that retail schedules before a save where the compiler puts it after.
 
 ## libgcc
 

@@ -12,7 +12,7 @@ the rest into the real repository.
 
 | Project | Used for |
 |---|---|
-| [Lynder063/rac1-decomp](https://github.com/Lynder063/rac1-decomp) | Repository layout, README, progress workflow, report generator, toolchain notes, the libgcc build recipe |
+| [Lynder063/rac1-decomp](https://github.com/Lynder063/rac1-decomp) | Repository layout, README, progress workflow, report generator, toolchain notes, the libgcc build recipe, `tools/ps2eeas_nops.py` and `tools/ps2eeas_dli.py` (the nops and constant sequences of SN's assembler) |
 | [OpenRAC](https://github.com/OpenRAC/OpenRAC) | Status of Deadlocked (`SCUS_974.65`), sourcing policy, game list |
 | [vetusmagnus/ratchet-uya-decomp](https://github.com/vetusmagnus/ratchet-uya-decomp) | Up Your Arsenal compiler research (SN ee-gcc 2.95.3 v1.36), closest engine relative. Its `compiler_matrix_findings.md` supplied the `-fopt-stack`, `-G8` and global-declaration findings used here |
 | [mateuszklysz/Lombyte](https://github.com/mateuszklysz/Lombyte) | R&C1 NTSC decomp, checked for Deadlocked coverage (none) |
